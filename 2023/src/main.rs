@@ -647,23 +647,34 @@ fn d5p2_process(seeds: &mut Vec<D5P2Range>, lut: &Vec<D5P1Range>) -> Vec<D5P2Ran
     let mut result: Vec<D5P2Range> = vec![];
     while !seeds.is_empty() {
         let seed = seeds.pop().unwrap();
+        println!("Parsing seeds at: {} range: {}", seed.src, seed.len);
         let tmp_seed = d5p2_get_dst(&seed, lut);
-        if tmp_seed.is_some() {
+        if !tmp_seed.is_some() {
             // Empty result means 1:1 mapping
             result.push(seed);
         } else {
             let tmp_range = tmp_seed.unwrap();
             if seed.src >= tmp_range.src && seed.src + seed.len < tmp_range.src + tmp_range.len {
                 // All current range fits in new mapping
-                result.push(D5P2Range { src: tmp_range.dst, len: seed.len });
+                println!("Range fits");
+                result.push(D5P2Range { src: tmp_range.dst + seed.src - tmp_range.src, len: seed.len });
             } else if seed.src >= tmp_range.src && seed.src + seed.len >= tmp_range.src + tmp_range.len {
                 // Begining of current range fits in new mapping
+                println!("Left side of the range fits");
+                let offset = seed.src - tmp_range.src;
+                let fit_len = tmp_range.len - offset;
+                result.push(D5P2Range { src: tmp_range.dst + offset, len: fit_len });
+                seeds.push(D5P2Range { src: tmp_range.src + tmp_range.len, len: seed.len - fit_len });
             } else {
-                // End of current range fits in ne mapping
+                // End of current range fits in new mapping
+                println!("Right side of the range fits[src {} {}| range {} {}]", seed.src, seed.len, tmp_range.src, tmp_range.len);
+                // Add one because first element from the tmp_range is also parsed already
+                let fit_len = seed.len - (tmp_range.src - seed.src) + 1;
+                result.push(D5P2Range { src: tmp_range.dst, len: fit_len });
+                seeds.push(D5P2Range { src: seed.src, len: seed.len - fit_len });
             }
         }
         //result.push(tmp_seed);
-
     }
     return result;
 }
@@ -724,16 +735,62 @@ fn day_5_part_2(input_lines: &Vec<String>) {
         println!("Processing seed at: {} range: {}", seed[0], seed[1]);
         tmp_src.push(D5P2Range { src: seed[0].parse().unwrap(), len: seed[1].parse().unwrap() })
     }
+    println!("Parsing SeedToSoil");
     tmp_src = d5p2_process(&mut tmp_src, &states_lut.get(&D5P1State::SeedToSoil).unwrap());
+    println!("Parsing SoilToFertilizer");
     tmp_src = d5p2_process(&mut tmp_src, &states_lut.get(&D5P1State::SoilToFertilizer).unwrap());
+    println!("Parsing FertilizerToWater");
     tmp_src = d5p2_process(&mut tmp_src, &states_lut.get(&D5P1State::FertilizerToWater).unwrap());
+    println!("Parsing WaterToLight");
     tmp_src = d5p2_process(&mut tmp_src, &states_lut.get(&D5P1State::WaterToLight).unwrap());
+    println!("Parsing LightToTemperature");
     tmp_src = d5p2_process(&mut tmp_src, &states_lut.get(&D5P1State::LightToTemperature).unwrap());
+    println!("Parsing TemperatureToHumidity");
     tmp_src = d5p2_process(&mut tmp_src, &states_lut.get(&D5P1State::TemperatureToHumidity).unwrap());
+    println!("Parsing HumidityToLocation");
     tmp_src = d5p2_process(&mut tmp_src, &states_lut.get(&D5P1State::HumidityToLocation).unwrap());
+    println!("Parsing finished");
     for entry in tmp_src {
         if entry.src < result {
             result = entry.src;
+        }
+    }
+    println!("Final result: {}", result);
+}
+
+fn day_6_part_1(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 6 part 1");
+    let mut result = 1;
+
+    let times: Vec<&str> = input_lines[0].split(' ').filter(|x| x.len() > 0).collect();
+    let distances: Vec<&str> = input_lines[1].split(' ').filter(|x| x.len() > 0).collect();
+    assert_eq!(times[0], "Time:");
+    assert_eq!(distances[0], "Distance:");
+    assert_eq!(times.len(), distances.len());
+    for idx in 1..times.len() {
+        let time: u64 = times[idx].parse().unwrap();
+        let distance: u64 = distances[idx].parse().unwrap();
+        println!("Parsing time: {} and distance: {}", time, distance);
+        let valid: Vec<u64>= (1..time).filter(|x| x * (time - x) > distance).collect();
+        println!("Possible times: {:?}", valid);
+        result = result * valid.len();
+    }
+    println!("Final result: {}", result);
+}
+
+fn day_6_part_2(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 6 part 2");
+    let mut result = 0;
+
+    let times: Vec<&str> = input_lines[0].split(' ').filter(|x| x.len() > 0).skip(1).collect();
+    let distances: Vec<&str> = input_lines[1].split(' ').filter(|x| x.len() > 0).skip(1).collect();
+    let time: u64 = times.join("").parse().unwrap();
+    let distance: u64 = distances.join("").parse().unwrap();
+    println!("Count for time: {} and distance: {}", time, distance);
+    for i in 1..time {
+        if i * (time - i) > distance {
+            result = time - i - i + 1;
+            break;
         }
     }
     println!("Final result: {}", result);
@@ -752,6 +809,8 @@ fn main() {
         ("d4p2".to_string(), day_4_part_2 ),
         ("d5p1".to_string(), day_5_part_1 ),
         ("d5p2".to_string(), day_5_part_2 ),
+        ("d6p1".to_string(), day_6_part_1 ),
+        ("d6p2".to_string(), day_6_part_2 ),
     ]);
     if env::args().count() != 3 {
         println!("Usage: program_name day_and_part input_path");
