@@ -796,6 +796,82 @@ fn day_6_part_2(input_lines: &Vec<String>) {
     println!("Final result: {}", result);
 }
 
+#[derive(Debug)]
+enum D7P1Type {
+    FiveOfKind,
+    FourOfKind,
+    FullHouse,
+    ThreeOfKind,
+    TwoPair,
+    OnePair,
+    HighCard,
+}
+
+#[derive(Debug)]
+struct D7P1Hand {
+    hand: String,
+    name: D7P1Type,
+    bid: u32,
+}
+
+fn d7p1_hand_to_type(input: &str) -> D7P1Type {
+    let stats = input.to_string().chars().fold(HashMap::new(), |mut acc, c| {
+        *acc.entry(c).or_insert(0) += 1;
+        acc
+    });
+    println!("Preparsed {:?}", stats);
+    if stats.len() == 5 {
+        // 1 + 1 + 1 + 1 + 1
+        return D7P1Type::HighCard;
+    } else if stats.len() == 4 {
+        // 2 + 1 + 1 + 1
+        return D7P1Type::OnePair;
+    } else if stats.len() == 3 {
+        // 3 + 1 + 1, 2 + 2 + 1
+        for (_, val) in stats.iter() {
+            if *val == 2 {
+                return D7P1Type::TwoPair;
+            }
+        }
+        return D7P1Type::ThreeOfKind;
+    } else if stats.len() == 2 {
+        // 4 + 1, 3 + 2
+        if stats.get(stats.keys().next().unwrap()).unwrap() == &4 {
+            return D7P1Type::FourOfKind;
+        }
+        return D7P1Type::FullHouse;
+    } else if stats.len() == 1 {
+        return D7P1Type::FiveOfKind;
+    }
+    D7P1Type::HighCard
+}
+
+fn d7p1_parse_input(input: &String) -> D7P1Hand {
+    let val: Vec<_> = input.split(' ').collect();
+    return D7P1Hand { hand: val[0].to_string(), name: d7p1_hand_to_type(val[0]), bid: val[1].parse().unwrap() }
+}
+
+fn day_7_part_1(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 7 part 1");
+    let result: u64 = u64::MAX;
+    let mut hands: Vec<D7P1Hand> = vec![];
+    for (idx, line) in input_lines.into_iter().enumerate() {
+        println!("Parsing line {}: {}", idx, line);
+        hands.push(d7p1_parse_input(line))
+    }
+    println!("Parsed hands: {:?}", hands);
+    println!("Final result: {}", result);
+}
+
+fn day_7_part_2(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 7 part 2");
+    let result: u64 = u64::MAX;
+    for (idx, line) in input_lines.into_iter().enumerate() {
+        println!("Parsing line {}: {}", idx, line);
+    }
+    println!("Final result: {}", result);
+}
+
 fn main() {
     let solutions = HashMap::from([
         ("d1p1".to_string(), day_1_part_1 as fn(&Vec<String>) ), // cast to let compiler know about item
@@ -811,6 +887,8 @@ fn main() {
         ("d5p2".to_string(), day_5_part_2 ),
         ("d6p1".to_string(), day_6_part_1 ),
         ("d6p2".to_string(), day_6_part_2 ),
+        ("d7p1".to_string(), day_7_part_1 ),
+        ("d7p2".to_string(), day_7_part_2 ),
     ]);
     if env::args().count() != 3 {
         println!("Usage: program_name day_and_part input_path");
