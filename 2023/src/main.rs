@@ -796,22 +796,22 @@ fn day_6_part_2(input_lines: &Vec<String>) {
     println!("Final result: {}", result);
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Hash, Eq)]
 enum D7P1Type {
-    FiveOfKind,
-    FourOfKind,
-    FullHouse,
-    ThreeOfKind,
-    TwoPair,
-    OnePair,
-    HighCard,
+    FiveOfKind = 6,
+    FourOfKind = 5,
+    FullHouse = 4,
+    ThreeOfKind = 3,
+    TwoPair = 2,
+    OnePair = 1,
+    HighCard = 0,
 }
 
 #[derive(Debug)]
 struct D7P1Hand {
     hand: String,
     name: D7P1Type,
-    bid: u32,
+    bid: u64,
 }
 
 fn d7p1_hand_to_type(input: &str) -> D7P1Type {
@@ -836,7 +836,8 @@ fn d7p1_hand_to_type(input: &str) -> D7P1Type {
         return D7P1Type::ThreeOfKind;
     } else if stats.len() == 2 {
         // 4 + 1, 3 + 2
-        if stats.get(stats.keys().next().unwrap()).unwrap() == &4 {
+        let tmp = stats.get(stats.keys().next().unwrap()).unwrap();
+        if tmp == &4 || tmp == &1 {
             return D7P1Type::FourOfKind;
         }
         return D7P1Type::FullHouse;
@@ -846,6 +847,55 @@ fn d7p1_hand_to_type(input: &str) -> D7P1Type {
     D7P1Type::HighCard
 }
 
+fn d7p1_compare(a: &D7P1Hand, b: &D7P1Hand) -> std::cmp::Ordering {
+    let lut: HashMap<char, u8> = HashMap::from([
+        ('2', 0),
+        ('3', 1),
+        ('4', 2),
+        ('5', 3),
+        ('6', 4),
+        ('7', 5),
+        ('8', 6),
+        ('9', 7),
+        ('T', 8),
+        ('J', 9),
+        ('Q', 10),
+        ('K', 11),
+        ('A', 12),
+    ]);
+
+    let lut_h: HashMap<D7P1Type, u8> = HashMap::from([
+        (D7P1Type::HighCard, 0),
+        (D7P1Type::OnePair, 1),
+        (D7P1Type::TwoPair, 2),
+        (D7P1Type::ThreeOfKind, 3),
+        (D7P1Type::FullHouse, 4),
+        (D7P1Type::FourOfKind, 5),
+        (D7P1Type::FiveOfKind, 6),
+    ]);
+    if a.name == b.name {
+        // hands are equal check cards starting from first
+        for i in 0..a.hand.len() {
+            let tmp_a = a.hand.chars().nth(i).unwrap();
+            let tmp_b = b.hand.chars().nth(i).unwrap();
+            if tmp_a == tmp_b {
+                continue;
+            }
+            if lut.get(&tmp_a).unwrap() > lut.get(&tmp_b).unwrap() {
+                return std::cmp::Ordering::Greater;
+            }
+            return std::cmp::Ordering::Less;
+        }
+    } else {
+        if lut_h.get(&a.name).unwrap() > lut_h.get(&b.name).unwrap() {
+            return std::cmp::Ordering::Greater;
+        } else {
+            return std::cmp::Ordering::Less;
+        }
+    }
+    return std::cmp::Ordering::Greater;
+}
+
 fn d7p1_parse_input(input: &String) -> D7P1Hand {
     let val: Vec<_> = input.split(' ').collect();
     return D7P1Hand { hand: val[0].to_string(), name: d7p1_hand_to_type(val[0]), bid: val[1].parse().unwrap() }
@@ -853,13 +903,17 @@ fn d7p1_parse_input(input: &String) -> D7P1Hand {
 
 fn day_7_part_1(input_lines: &Vec<String>) {
     println!("AoC 2023 Day 7 part 1");
-    let result: u64 = u64::MAX;
+    let mut result: u64 = 0;
     let mut hands: Vec<D7P1Hand> = vec![];
     for (idx, line) in input_lines.into_iter().enumerate() {
         println!("Parsing line {}: {}", idx, line);
         hands.push(d7p1_parse_input(line))
     }
-    println!("Parsed hands: {:?}", hands);
+    hands.sort_by(d7p1_compare);
+    for (idx, hand) in hands.iter().enumerate() {
+        println!("Parsed hand: {} {:?}", idx+1, hand);
+        result += (idx as u64 + 1) * hand.bid;
+    }
     println!("Final result: {}", result);
 }
 
