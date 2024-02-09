@@ -4,6 +4,7 @@ use std::fs::read_to_string;
 
 #[allow(dead_code)]
 fn aoc_print_vec(input: &Vec<i32>) {
+    // do not delete this function, to no forget such silly behavior :D
     for v in input.into_iter() {
         print!("{} ", v);
     }
@@ -917,12 +918,158 @@ fn day_7_part_1(input_lines: &Vec<String>) {
     println!("Final result: {}", result);
 }
 
+fn d7p2_hand_to_type(input: &str) -> D7P1Type {
+    let stats = input.to_string().chars().fold(HashMap::new(), |mut acc, c| {
+        *acc.entry(c).or_insert(0) += 1;
+        acc
+    });
+    println!("Preparsed {:?}", stats);
+    let js = stats.get(&'J');
+    if stats.len() == 1 {
+        return D7P1Type::FiveOfKind;
+    } else if stats.len() == 5 {
+        // 1 + 1 + 1 + 1 + 1
+        if js.is_some() {
+            return D7P1Type::OnePair;
+        }
+        return D7P1Type::HighCard;
+    } else if stats.len() == 4 {
+        // 2 + 1 + 1 + 1
+        if js.is_some() {
+            // Either 2J + 1X, else 1J + 2X
+            return D7P1Type::ThreeOfKind;
+        }
+        return D7P1Type::OnePair;
+    } else if stats.len() == 3 {
+        // 3 + 1 + 1, 2 + 2 + 1
+        if js.is_some() {
+            let tmp = js.unwrap();
+            for (key, val) in stats.iter() {
+                if key == &'J' {
+                    continue;
+                }
+                if *val == 2 {
+                    if tmp == &2 {
+                        return D7P1Type::FourOfKind;
+                    } else {
+                        return D7P1Type::FullHouse;
+                    }
+                }
+            }
+            return D7P1Type::FourOfKind;
+        }
+        for (_, val) in stats.iter() {
+            if *val == 2 {
+                return D7P1Type::TwoPair;
+            }
+        }
+        return D7P1Type::ThreeOfKind;
+    } else if stats.len() == 2 {
+        // 4 + 1, 3 + 2
+        let tmp = stats.get(stats.keys().next().unwrap()).unwrap();
+        if js.is_some() {
+            return D7P1Type::FiveOfKind;
+        }
+        if tmp == &4 || tmp == &1 {
+            return D7P1Type::FourOfKind;
+        }
+        return D7P1Type::FullHouse;
+    }
+    D7P1Type::HighCard
+}
+
+fn d7p2_compare(a: &D7P1Hand, b: &D7P1Hand) -> std::cmp::Ordering {
+    let lut: HashMap<char, u8> = HashMap::from([
+        ('J', 0),
+        ('2', 1),
+        ('3', 2),
+        ('4', 3),
+        ('5', 4),
+        ('6', 5),
+        ('7', 6),
+        ('8', 7),
+        ('9', 8),
+        ('T', 9),
+        ('Q', 10),
+        ('K', 11),
+        ('A', 12),
+    ]);
+
+    let lut_h: HashMap<D7P1Type, u8> = HashMap::from([
+        (D7P1Type::HighCard, 0),
+        (D7P1Type::OnePair, 1),
+        (D7P1Type::TwoPair, 2),
+        (D7P1Type::ThreeOfKind, 3),
+        (D7P1Type::FullHouse, 4),
+        (D7P1Type::FourOfKind, 5),
+        (D7P1Type::FiveOfKind, 6),
+    ]);
+    if a.name == b.name {
+        // hands are equal check cards starting from first
+        for i in 0..a.hand.len() {
+            let tmp_a = a.hand.chars().nth(i).unwrap();
+            let tmp_b = b.hand.chars().nth(i).unwrap();
+            if tmp_a == tmp_b {
+                continue;
+            }
+            if lut.get(&tmp_a).unwrap() > lut.get(&tmp_b).unwrap() {
+                return std::cmp::Ordering::Greater;
+            }
+            return std::cmp::Ordering::Less;
+        }
+    } else {
+        if lut_h.get(&a.name).unwrap() > lut_h.get(&b.name).unwrap() {
+            return std::cmp::Ordering::Greater;
+        } else {
+            return std::cmp::Ordering::Less;
+        }
+    }
+    return std::cmp::Ordering::Greater;
+}
+
+fn d7p2_parse_input(input: &String) -> D7P1Hand {
+    let val: Vec<_> = input.split(' ').collect();
+    return D7P1Hand { hand: val[0].to_string(), name: d7p2_hand_to_type(val[0]), bid: val[1].parse().unwrap() }
+}
+
 fn day_7_part_2(input_lines: &Vec<String>) {
     println!("AoC 2023 Day 7 part 2");
-    let result: u64 = u64::MAX;
+    let mut result: u64 = 0;
+    let mut hands: Vec<D7P1Hand> = vec![];
     for (idx, line) in input_lines.into_iter().enumerate() {
         println!("Parsing line {}: {}", idx, line);
+        hands.push(d7p2_parse_input(line))
     }
+    hands.sort_by(d7p2_compare);
+    println!("Sorted: {:?}", hands);
+    for (idx, hand) in hands.iter().enumerate() {
+        if hand.hand.find('J').is_some() {
+            println!("Parsed hand: {} {:?}", idx+1, hand);
+        }
+        result += (idx as u64 + 1) * hand.bid;
+    }
+    println!("Final result: {}", result);
+}
+
+fn day_8_part_1(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 8 part 1");
+    let result = 0;
+
+    for (_,line) in input_lines.into_iter().enumerate() {
+        println!("{}", line);
+    }
+
+    println!("Final result: {}", result);
+}
+
+fn day_8_part_2(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 8 part 2");
+    let result = 0;
+
+    for (_,line) in input_lines.into_iter().enumerate() {
+        println!("{}", line);
+    }
+
     println!("Final result: {}", result);
 }
 
@@ -943,6 +1090,8 @@ fn main() {
         ("d6p2".to_string(), day_6_part_2 ),
         ("d7p1".to_string(), day_7_part_1 ),
         ("d7p2".to_string(), day_7_part_2 ),
+        ("d8p1".to_string(), day_8_part_1 ),
+        ("d8p2".to_string(), day_8_part_2 ),
     ]);
     if env::args().count() != 3 {
         println!("Usage: program_name day_and_part input_path");
