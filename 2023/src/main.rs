@@ -1,3 +1,4 @@
+use core::str;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::read_to_string;
@@ -9,6 +10,22 @@ fn aoc_print_vec(input: &Vec<i32>) {
         print!("{} ", v);
     }
     println!("");
+}
+
+fn aoc_gcm(a: u64, b: u64) -> u64 {
+    if b == 0 {
+        return a;
+    }
+    println!("AOC_LIB Checking: {} {}", a, b);
+    if a > b {
+        return aoc_gcm(b, a%b);
+    } else {
+        return aoc_gcm(a, b%a);
+    }
+}
+
+fn aoc_lcm(a: u64, b: u64) -> u64 {
+    return a*b / aoc_gcm(a, b);
 }
 
 fn day_1_part_1(input_lines: &Vec<String>) {
@@ -1053,23 +1070,229 @@ fn day_7_part_2(input_lines: &Vec<String>) {
 
 fn day_8_part_1(input_lines: &Vec<String>) {
     println!("AoC 2023 Day 8 part 1");
-    let result = 0;
+    let mut result = 0;
 
-    for (_,line) in input_lines.into_iter().enumerate() {
-        println!("{}", line);
+    let directions = input_lines.get(0).unwrap();
+    let mut nodes: HashMap<&str, (&str, &str)> = HashMap::new();
+
+    println!("Directions: {}", directions);
+    for (_,line) in input_lines.into_iter().skip(2).enumerate() {
+        let tmp: Vec<&str> = line.split(' ').collect();
+        assert_eq!(tmp.len(), 4);
+        println!("{:?}", tmp);
+        nodes.insert(tmp[0], (&tmp[2][1..tmp[2].len()-1], &tmp[3][..tmp[3].len()-1]));
     }
-
+    println!("{:?}", nodes);
+    let mut current = "AAA";
+    while current != "ZZZ" {
+        if directions.chars().nth(result%directions.len()).unwrap() == 'R' {
+            current = nodes.get(current).unwrap().1;
+        } else {
+            current = nodes.get(current).unwrap().0;
+        }
+        result += 1;
+    }
     println!("Final result: {}", result);
 }
 
 fn day_8_part_2(input_lines: &Vec<String>) {
     println!("AoC 2023 Day 8 part 2");
-    let result = 0;
+    let mut result: u64;
+    let mut results: Vec<u64> = vec![];
 
-    for (_,line) in input_lines.into_iter().enumerate() {
-        println!("{}", line);
+    let directions = input_lines.get(0).unwrap();
+    let mut nodes: HashMap<&str, (&str, &str)> = HashMap::new();
+    let mut currents: Vec<&str> = vec![];
+
+    println!("Directions: {}", directions);
+    for (_,line) in input_lines.into_iter().skip(2).enumerate() {
+        let tmp: Vec<&str> = line.split(' ').collect();
+        assert_eq!(tmp.len(), 4);
+        println!("{:?}", tmp);
+        nodes.insert(tmp[0], (&tmp[2][1..tmp[2].len()-1], &tmp[3][..tmp[3].len()-1]));
+        if tmp[0].ends_with("A") {
+            currents.push(&tmp[0]);
+        }
+    }
+    println!("Nodes: {:?}", nodes);
+    println!("Start: {:?}", currents);
+    for mut current in currents {
+        println!("Parsing: {}", current);
+        result = 0;
+        while !current.ends_with('Z') {
+            if directions.chars().nth(result as usize%directions.len()).unwrap() == 'R' {
+                current = nodes.get(current).unwrap().1;
+            } else {
+                current = nodes.get(current).unwrap().0;
+            }
+            result += 1;
+        }
+        results.push(result);
+    }
+    println!("Final result: {:?}", results);
+    result = 0;
+    for tmp in results {
+        println!("Tmp result: {} {}", tmp, result);
+        if result == 0 {
+            result = tmp;
+        } else {
+            result = aoc_lcm(tmp, result);
+        }
+    }
+    println!("Final result: {}", result);
+}
+
+fn d9p1_get_next_step(vals: &Vec<i64>) -> i64 {
+    //println!("Values to parse: {:?}", vals);
+    let mut diffs: Vec<i64> = vec![];
+    let mut all_same = true;
+    for idx in 1..vals.len() {
+        let diff = vals[idx] - vals[idx-1];
+        diffs.push(diff);
+        if diffs.first().unwrap() != &diff {
+            all_same = false;
+        }
+    }
+    if all_same {
+        return *vals.last().unwrap() + *diffs.first().unwrap();
+    }
+    return *vals.last().unwrap() + d9p1_get_next_step(&diffs);
+}
+
+fn day_9_part_1(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 9 part 1");
+    let mut result = 0;
+
+    for (idx ,line) in input_lines.into_iter().enumerate() {
+        let series: Vec<i64> = line.split(' ').map(|x| x.parse::<i64>().unwrap()).collect();
+        let next = d9p1_get_next_step(&series);
+        result += next;
+        println!("Idx: {} Next: {} Intermediate result: {}", idx, next, result);
+    }
+    println!("Final result: {}", result);
+}
+
+fn d9p2_get_prev_step(vals: &Vec<i64>) -> i64 {
+    //println!("Values to parse: {:?}", vals);
+    let mut diffs: Vec<i64> = vec![];
+    let mut all_same = true;
+    for idx in 1..vals.len() {
+        let diff = vals[idx] - vals[idx-1];
+        diffs.push(diff);
+        if diffs.first().unwrap() != &diff {
+            all_same = false;
+        }
+    }
+    if all_same {
+        return *vals.first().unwrap() - *diffs.first().unwrap();
+    }
+    return *vals.first().unwrap() - d9p2_get_prev_step(&diffs);
+}
+
+fn day_9_part_2(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 9 part 2");
+    let mut result = 0;
+
+    for (idx ,line) in input_lines.into_iter().enumerate() {
+        println!("{}: {}", idx, line);
+        let series: Vec<i64> = line.split(' ').map(|x| x.parse::<i64>().unwrap()).collect();
+        let next = d9p2_get_prev_step(&series);
+        result += next;
+        println!("Idx: {} Next: {} Intermediate result: {}", idx, next, result);
+    }
+    println!("Final result: {}", result);
+}
+
+fn d10p1_is_valid_move(map: &Vec<String>, pos: (i16, i16)) -> bool {
+    if pos.0 < 0 || pos.1 < 0 {
+        return false;
+    }
+    if pos.0 >= map.first().unwrap().len() as i16 || pos.1 >= map.len() as i16 {
+        return false;
+    }
+    true
+}
+
+fn d10p1_get_next(map: &Vec<String>, pos: &(i16, i16), visited: &HashSet<(i16, i16)>, nexts: &mut Vec<(i16, i16)>) {
+    let steps: HashMap<char, Vec<(i16, i16)>> = HashMap::from([
+        ('|', vec![(0, -1), (0, 1)]),
+        ('-', vec![(-1, 0), (1, 0)]),
+        ('L', vec![(0, -1), (1, 0)]),
+        ('J', vec![(0, -1), (-1, 0)]),
+        ('7', vec![(0, 1), (-1, 0)]),
+        ('F', vec![(0, 1), (1, 0)]),
+        ('.', vec![]),
+        ('S', vec![(-1, 0), (1, 0), (0, -1), (0, 1)]),
+    ]);
+
+    let is_valid_nbr = |pos: &(i16, i16), valid_pos: &Vec<(i16, i16)>| -> bool {
+        // check if pipe on next position is valid neighbor
+        // println!("Validating nbr at: {:?} against: {:?}", pos, valid_pos);
+        for tmp in valid_pos {
+            if tmp.0 + pos.0 == 0 && tmp.1 + pos.1 == 0 {
+                return true;
+            }
+        }
+        return false;
+    };
+    println!("Getting nexts for {:?}", pos);
+    let current_pipe = map[pos.1 as usize].chars().nth(pos.0 as usize).unwrap();
+    assert!(steps.contains_key(&current_pipe));
+    let next_steps = steps.get(&current_pipe).unwrap();
+    for tmp in next_steps {
+        let next_pos = (pos.0 + tmp.0, pos.1 + tmp.1);
+        if !d10p1_is_valid_move(map, next_pos) {
+            continue;
+        }
+        let next_pipe = map[next_pos.1 as usize].chars().nth(next_pos.0 as usize).unwrap();
+        //println!("Checking: {} at {:?}/{:?}", next_pipe, next_pos, tmp);
+        if is_valid_nbr(tmp, steps.get(&next_pipe).unwrap()) && !visited.contains(&next_pos) {
+            nexts.push(next_pos);
+        }
+    }
+}
+
+fn day_10_part_1(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 10 part 1");
+    let mut result = 0;
+    let mut start = (-1, -1);
+
+    for (idx ,line) in input_lines.into_iter().enumerate() {
+        println!("{}: {}", idx, line);
+        if line.contains('S') {
+            start = (line.find('S').unwrap() as i16, idx as i16);
+        }
     }
 
+    let mut tmp_map = input_lines.clone();
+    for line in tmp_map.iter_mut() {
+        *line = std::iter::repeat('.').take(line.len()).collect::<String>()
+    }
+
+    println!("Starting at: {:?}", start);
+    let mut nexts:Vec<(i16, i16)> = vec![start];
+    let mut visited: HashSet<(i16, i16)> = HashSet::new();
+    while !nexts.is_empty() {
+        let next = nexts.pop().unwrap();
+        tmp_map[next.1 as usize].replace_range(next.0 as usize..next.0 as usize +1, "#");
+        visited.insert(next);
+        d10p1_get_next(input_lines, &next, &visited, &mut nexts);
+    }
+    for line in tmp_map {
+        println!("{:?}", line);
+    }
+    result = visited.len();
+    println!("Visited nodes: {}", result);
+    println!("Final result: {}", result/2);
+}
+
+fn day_10_part_2(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 10 part 2");
+    let result = 0;
+
+    for (idx ,line) in input_lines.into_iter().enumerate() {
+        println!("{}: {}", idx, line);
+    }
     println!("Final result: {}", result);
 }
 
@@ -1092,6 +1315,10 @@ fn main() {
         ("d7p2".to_string(), day_7_part_2 ),
         ("d8p1".to_string(), day_8_part_1 ),
         ("d8p2".to_string(), day_8_part_2 ),
+        ("d9p1".to_string(), day_9_part_1 ),
+        ("d9p2".to_string(), day_9_part_2 ),
+        ("d10p1".to_string(), day_10_part_1 ),
+        ("d10p2".to_string(), day_10_part_2 ),
     ]);
     if env::args().count() != 3 {
         println!("Usage: program_name day_and_part input_path");
