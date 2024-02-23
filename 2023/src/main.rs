@@ -1235,7 +1235,7 @@ fn d10p1_get_next(map: &Vec<String>, pos: &(i16, i16), visited: &HashSet<(i16, i
         }
         return false;
     };
-    println!("Getting nexts for {:?}", pos);
+    //println!("Getting nexts for {:?}", pos);
     let current_pipe = map[pos.1 as usize].chars().nth(pos.0 as usize).unwrap();
     assert!(steps.contains_key(&current_pipe));
     let next_steps = steps.get(&current_pipe).unwrap();
@@ -1254,7 +1254,7 @@ fn d10p1_get_next(map: &Vec<String>, pos: &(i16, i16), visited: &HashSet<(i16, i
 
 fn day_10_part_1(input_lines: &Vec<String>) {
     println!("AoC 2023 Day 10 part 1");
-    let mut result = 0;
+    let result;
     let mut start = (-1, -1);
 
     for (idx ,line) in input_lines.into_iter().enumerate() {
@@ -1286,12 +1286,127 @@ fn day_10_part_1(input_lines: &Vec<String>) {
     println!("Final result: {}", result/2);
 }
 
+fn d10p2_get_shape(map: &Vec<String>, visited: &HashSet<(i16, i16)>, start: &(i16, i16)) -> char {
+    let offsets: Vec<(i16, i16)> = vec![(-1, 0), (1, 0), (0, -1), (0, 1)];
+    let mut nbrs: HashSet<(i16, i16)> = HashSet::new();
+    for offset in offsets {
+        let tmp = (start.0 + offset.0,start.1 + offset.1);
+        if visited.contains(&tmp) {
+            let nbr_shape = map[tmp.1 as usize].chars().nth(tmp.0 as usize).unwrap();
+            if nbr_shape == '|' && (offset == (-1, 0) || offset == (1, 0)) {
+                continue;
+            } else if nbr_shape == '-' && (offset == (0, -1) || offset == (0, 1)) {
+                continue;
+            } else if nbr_shape == 'F' && (offset == (1, 0) || offset == (0, 1)) {
+                continue;
+            } else if nbr_shape == 'L' && (offset == (1, 0) || offset == (0, -1)) {
+                continue;
+            } else if nbr_shape == 'J' && (offset == (-1, 0) || offset == (0, -1)) {
+                continue;
+            } else if nbr_shape == '7' && (offset == (-1, 0) || offset == (0, 1)) {
+                continue;
+            }
+            nbrs.insert(offset);
+        }
+    }
+    println!("Nbrs: {:?}", nbrs);
+    assert_eq!(nbrs.len(), 2);
+    if nbrs.contains(&(-1, 0)) && nbrs.contains(&(1, 0)) {
+        return '-';
+    } else if nbrs.contains(&(0, -1)) && nbrs.contains(&(0, 1)) {
+        return '|';
+    } else if nbrs.contains(&(0, 1)) && nbrs.contains(&(1, 0)) {
+        return 'F';
+    } else if nbrs.contains(&(0, -1)) && nbrs.contains(&(1, 0)) {
+        return 'L';
+    } else if nbrs.contains(&(0, -1)) && nbrs.contains(&(-1, 0)) {
+        return 'J';
+    } else if nbrs.contains(&(0, 1)) && nbrs.contains(&(-1, 0)) {
+        return '7';
+    }
+    return 'X';
+}
+
 fn day_10_part_2(input_lines: &Vec<String>) {
     println!("AoC 2023 Day 10 part 2");
-    let result = 0;
+    let mut result = 0;
+    let mut start = (-1, -1);
 
     for (idx ,line) in input_lines.into_iter().enumerate() {
         println!("{}: {}", idx, line);
+        if line.contains('S') {
+            start = (line.find('S').unwrap() as i16, idx as i16);
+        }
+    }
+
+    let mut tmp_map = input_lines.clone();
+    for line in tmp_map.iter_mut() {
+        *line = std::iter::repeat('.').take(line.len()).collect::<String>()
+    }
+
+    println!("Starting at: {:?}", start);
+    let mut nexts:Vec<(i16, i16)> = vec![start];
+    let mut visited: HashSet<(i16, i16)> = HashSet::new();
+    while !nexts.is_empty() {
+        let next = nexts.pop().unwrap();
+        tmp_map[next.1 as usize].replace_range(next.0 as usize..next.0 as usize +1, "#");
+        visited.insert(next);
+        d10p1_get_next(input_lines, &next, &visited, &mut nexts);
+    }
+
+    for row in 0..input_lines.len() {
+        for col in 0..input_lines[row].len() {
+            if visited.contains(&(col as i16, row as i16)) {
+                continue;
+            }
+            let mut edge_counter = 0;
+            let mut prev: char = ' ';
+            for (idx, mut val) in input_lines[row].chars().into_iter().enumerate() {
+                if idx >= col {
+                    break;
+                }
+                if !visited.contains(&(idx as i16, row as i16)) {
+                    // we scann all characters in the line, previous check does not apply here
+                    continue;
+                }
+
+                if val == '-' {
+                    continue;
+                }
+
+                if val == 'S' {
+                    // we need to convert S to proper shape to proprly count number of crossed
+                    // edges
+                    val = d10p2_get_shape(&input_lines, &visited, &start);
+                    println!("Replacing S to {}", prev);
+                }
+
+                if  val == '|' {
+                    edge_counter += 1;
+                } else {
+                    if val == '7' && (prev == 'L' || prev == 'S') {
+                        edge_counter += 1;
+                    } else if val == 'J' && (prev == 'F' || prev == 'S') {
+                        edge_counter += 1;
+                    }
+                }
+
+                if val != '|' && val != '-' {
+                    prev = val;
+                }
+            }
+
+            //println!("Pos: {:?} edges: {}", (col, row), edge_counter);
+            if edge_counter > 0 && edge_counter%2 == 1 {
+                // we crossed the edge of pipe "circle" odd number of times which means we are
+                // inside the "circle", read about ray casting to learn more about it
+                result += 1;
+            }
+        }
+    }
+
+    for line in tmp_map {
+        println!("{:?}", line);
     }
     println!("Final result: {}", result);
 }
