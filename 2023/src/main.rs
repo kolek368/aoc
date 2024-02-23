@@ -1411,6 +1411,74 @@ fn day_10_part_2(input_lines: &Vec<String>) {
     println!("Final result: {}", result);
 }
 
+fn day_11_part_1(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 11 part 1");
+    let mut result = 0;
+    // We need to clone the input becasue we have to parse and modify it
+    let mut input_parsed: Vec<String> = vec![];
+
+    // Expand rows
+    for (_, line) in input_lines.into_iter().enumerate() {
+        input_parsed.push(line.to_string());
+        if !line.contains("#") {
+            input_parsed.push(line.to_string());
+        }
+    }
+
+    // Find empty columns
+    let mut empty_columns: Vec<usize> = vec![];
+    for idx in 0..input_parsed[0].len() {
+        let mut empty: bool = true;
+        for line in input_lines {
+            if line.chars().nth(idx).unwrap() != '.' {
+                empty = false;
+                break;
+            }
+        }
+
+        if empty {
+            println!("Idx: {} Offset: {}", idx, empty_columns.len());
+            empty_columns.push(idx + empty_columns.len());
+        }
+    }
+
+    // Expand columns
+    println!("Empty columns: {:?}", empty_columns);
+    for col in empty_columns {
+        for idx in 0..input_parsed.len() {
+            input_parsed[idx].insert(col, '.');
+        }
+    }
+
+    let mut galaxies: Vec<(i32, i32)> = vec![];
+    for (idx, line) in input_parsed.into_iter().enumerate() {
+        for (jdx, c) in line.chars().into_iter().enumerate() {
+            if c != '.' {
+                galaxies.push((idx as i32, jdx as i32));
+            }
+        }
+    }
+    println!("Galaxies to check: {:?}", galaxies);
+    for idx in 0..galaxies.len() {
+        for jdx in idx+1..galaxies.len() {
+            let a = galaxies[idx];
+            let b = galaxies[jdx];
+            result += (a.0-b.0).abs() + (a.1-b.1).abs();
+        }
+    }
+    println!("Final result: {}", result);
+}
+
+fn day_11_part_2(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 11 part 2");
+    let result = 0;
+
+    for (idx ,line) in input_lines.into_iter().enumerate() {
+        println!("{}: {}", idx, line);
+    }
+    println!("Final result: {}", result);
+}
+
 fn main() {
     let solutions = HashMap::from([
         ("d1p1".to_string(), day_1_part_1 as fn(&Vec<String>) ), // cast to let compiler know about item
@@ -1434,6 +1502,8 @@ fn main() {
         ("d9p2".to_string(), day_9_part_2 ),
         ("d10p1".to_string(), day_10_part_1 ),
         ("d10p2".to_string(), day_10_part_2 ),
+        ("d11p1".to_string(), day_11_part_1 ),
+        ("d11p2".to_string(), day_11_part_2 ),
     ]);
     if env::args().count() != 3 {
         println!("Usage: program_name day_and_part input_path");
