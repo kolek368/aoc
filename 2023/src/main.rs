@@ -1,4 +1,5 @@
 use core::str;
+use std::cmp::min;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::read_to_string;
@@ -1629,13 +1630,50 @@ fn day_12_part_2(input_lines: &Vec<String>) {
     println!("Final result: {}", result);
 }
 
+fn d13_p1_get_mirror(input: &Vec<String>, first_row: usize, last_row: usize, vertical: bool) -> usize {
+    if vertical {
+        for offset in 1..(last_row - first_row) {
+            let tmp_row = first_row + offset;
+            let mut valid = true;
+            println!("First: {} Last: {} Offset: {}", first_row, last_row, offset);
+            for idx in 0..min(last_row-offset - first_row, offset) {
+                println!("Checking row: {} and {}", tmp_row - idx - 1, tmp_row + idx);
+                for jdx in 0..input[first_row].len() {
+                    if input[tmp_row - idx - 1].chars().nth(jdx).unwrap() != input[tmp_row + idx].chars().nth(jdx).unwrap() {
+                        valid = false;
+                        break;
+                    }
+                }
+            }
+            if valid {
+                println!("Found middle at: {}", offset);
+                return offset;
+            }
+        }
+    }
+    return 0;
+}
+
 fn day_13_part_1(input_lines: &Vec<String>) {
     println!("AoC 2023 Day 13 part 1");
     let mut result = 0;
+    let mut first_row = usize::MAX;
     for (idx, line) in input_lines.into_iter().enumerate() {
-        println!("{}.:\t{}\n", idx, line);
-        result += 1;
+        if !line.is_empty() {
+            first_row = if first_row == usize::MAX { idx } else { first_row };
+            println!("{}.:\t{} (len:{})", idx, line, line.len());
+        }
+        else {
+            println!("Block starting {}:{}\n", first_row, idx);
+            result += d13_p1_get_mirror(input_lines, first_row, idx, true) * 100;
+            result += d13_p1_get_mirror(input_lines, first_row, idx, false);
+            first_row = usize::MAX;
+        }
     }
+    println!("Block starting {}:{}\n", first_row, input_lines.len());
+    result += d13_p1_get_mirror(input_lines, first_row, input_lines.len(), true) * 100;
+    result += d13_p1_get_mirror(input_lines, first_row, input_lines.len(), false);
+
     println!("Final result: {}", result);
 }
 
