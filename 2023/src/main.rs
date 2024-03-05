@@ -1471,10 +1471,180 @@ fn day_11_part_1(input_lines: &Vec<String>) {
 
 fn day_11_part_2(input_lines: &Vec<String>) {
     println!("AoC 2023 Day 11 part 2");
-    let result = 0;
+    let mut result: u64 = 0;
+    let mut empty_rows: Vec<usize> = vec![];
+    let mut empty_cols: Vec<usize> = vec![];
 
-    for (idx ,line) in input_lines.into_iter().enumerate() {
-        println!("{}: {}", idx, line);
+    // Expand rows
+    for (idx, line) in input_lines.into_iter().enumerate() {
+        if !line.contains("#") {
+            empty_rows.push(idx);
+        }
+    }
+
+    // Find empty columns
+    for idx in 0..input_lines[0].len() {
+        let mut empty: bool = true;
+        for line in input_lines {
+            if line.chars().nth(idx).unwrap() != '.' {
+                empty = false;
+                break;
+            }
+        }
+
+        if empty {
+            empty_cols.push(idx);
+        }
+    }
+
+    println!("Empty rows: {:?}", empty_rows);
+    println!("Empty columns: {:?}", empty_cols);
+
+    let mut galaxies: Vec<(i32, i32)> = vec![];
+    for (idx, line) in input_lines.into_iter().enumerate() {
+        for (jdx, c) in line.chars().into_iter().enumerate() {
+            if c != '.' {
+                galaxies.push((idx as i32, jdx as i32));
+            }
+        }
+    }
+    println!("Galaxies to check: {:?}", galaxies);
+    for idx in 0..galaxies.len() {
+        let multiplier = 1000000;
+        for jdx in idx+1..galaxies.len() {
+            let a = galaxies[idx];
+            let b = galaxies[jdx];
+            result += (a.0-b.0).abs() as u64 + (a.1-b.1).abs() as u64;
+
+            for row in empty_rows.iter() {
+                let r = *row as i32;
+                if r > a.0 && r < b.0 || r < a.0 && r > b.0 {
+                    result += multiplier - 1;
+                }
+            }
+            for col in empty_cols.iter() {
+                let c = *col as i32;
+                if c > a.1 && c < b.1 || c < a.1 && c > b.1 {
+                    result += multiplier - 1;
+                }
+            }
+        }
+    }
+    println!("Final result: {}", result);
+}
+
+fn d12_p1_valid_chain(springs: &str, len: i32) -> bool {
+    if (springs.len() as i32) < len {
+        return false;
+    }
+    for (idx, val) in springs.chars().enumerate() {
+        if (idx as i32) < len {
+            if val != '#' && val != '?' {
+                return false;
+            }
+        } else {
+            if val != '.' && val != '?' {
+                return false;
+            }
+            break;
+        }
+    }
+    return true;
+}
+
+fn d12_p1_arrangments_count(springs: &str, damaged: &Vec<i32>, offset: usize, lut: &mut HashMap<(String, usize), i64>) -> i64 {
+    //println!("Checking {} {:?} {}", springs, damaged, offset);
+    if lut.contains_key(&(springs.to_string(), offset)) {
+        return *lut.get(&(springs.to_string(), offset)).unwrap();
+    }
+
+    if springs.is_empty() {
+        if offset == damaged.len() {
+            //println!("Valid chain!");
+            return 1;
+        }
+        return 0;
+    }
+
+    if springs.chars().nth(0).unwrap() == '.' {
+        return d12_p1_arrangments_count(&springs[1..], damaged, offset, lut);
+    }
+    else if springs.chars().nth(0).unwrap() == '?' {
+        // check possible solutions when current '?' is assumed to be '.'
+        //println!("Count '.' branch {}", springs);
+        let mut result = d12_p1_arrangments_count(&springs[1..], damaged, offset, lut);
+        // check possible solutions when current '?' is assumed to be '#'
+        //println!("Count '#' branch {}", springs);
+        if offset < damaged.len() && d12_p1_valid_chain(springs, damaged[offset]) {
+            let skip = if (damaged[offset] as usize) < springs.len() { 1 } else { 0 };
+            result += d12_p1_arrangments_count(&springs[damaged[offset] as usize + skip..], damaged, offset + 1, lut);
+        }
+        lut.insert((springs.to_string(), offset), result);
+        return result;
+    }
+    else {
+        let mut result = 0;
+        if offset < damaged.len() && d12_p1_valid_chain(springs, damaged[offset]) {
+            let skip = if (damaged[offset] as usize) < springs.len() { 1 } else { 0 };
+            result = d12_p1_arrangments_count(&springs[damaged[offset] as usize + skip..], damaged, offset + 1, lut);
+        }
+        //println!("Invalid chain");
+        lut.insert((springs.to_string(), offset), result);
+        return result;
+    }
+}
+
+fn day_12_part_1(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 12 part 1");
+    let mut result = 0;
+    for (idx, line) in input_lines.into_iter().enumerate() {
+        let input: Vec<&str> = line.split(' ').collect();
+        assert_eq!(input.len(), 2);
+        let springs = input[0];
+        let damaged: Vec<i32> = input[1].split(',').map(|x| x.parse::<i32>().unwrap()).collect();
+        println!("{}.:\tSprings: {} Damaged: {:?}", idx, springs, damaged);
+        let mut lut: HashMap<(String, usize), i64> = HashMap::new();
+        let tmp_result = d12_p1_arrangments_count(springs, &damaged, 0, &mut lut);
+        println!("Line result: {}\n", tmp_result);
+        result += tmp_result;
+    }
+    println!("Final result: {}", result);
+}
+
+fn day_12_part_2(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 12 part 2");
+    let mut result = 0;
+    for (idx, line) in input_lines.into_iter().enumerate() {
+        let input: Vec<&str> = line.split(' ').collect();
+        assert_eq!(input.len(), 2);
+        let springs = input[0].to_string() + "?" + input[0] + "?" + input[0] + "?" + input[0] + "?" + input[0];
+        let tmp_damaged: Vec<i32> = input[1].split(',').map(|x| x.parse::<i32>().unwrap()).collect();
+        let damaged: Vec<i32> = [&tmp_damaged[..], &tmp_damaged, &tmp_damaged, &tmp_damaged, &tmp_damaged].concat();
+        println!("{}.:\tSprings: {} Damaged: {:?}", idx, springs, damaged);
+        let mut lut: HashMap<(String, usize), i64> = HashMap::new();
+        let tmp_result = d12_p1_arrangments_count(&springs, &damaged, 0, &mut lut);
+        println!("Line result: {}\n", tmp_result);
+        result += tmp_result;
+    }
+    println!("Final result: {}", result);
+}
+
+fn day_13_part_1(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 13 part 1");
+    let mut result = 0;
+    for (idx, line) in input_lines.into_iter().enumerate() {
+        println!("{}.:\t{}\n", idx, line);
+        result += 1;
+    }
+    println!("Final result: {}", result);
+}
+
+fn day_13_part_2(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 13 part 2");
+    let mut result = 0;
+    for (idx, line) in input_lines.into_iter().enumerate() {
+        println!("{}.:\t{}\n", idx, line);
+        result += 1;
     }
     println!("Final result: {}", result);
 }
@@ -1504,6 +1674,10 @@ fn main() {
         ("d10p2".to_string(), day_10_part_2 ),
         ("d11p1".to_string(), day_11_part_1 ),
         ("d11p2".to_string(), day_11_part_2 ),
+        ("d12p1".to_string(), day_12_part_1 ),
+        ("d12p2".to_string(), day_12_part_2 ),
+        ("d13p1".to_string(), day_13_part_1 ),
+        ("d13p2".to_string(), day_13_part_2 ),
     ]);
     if env::args().count() != 3 {
         println!("Usage: program_name day_and_part input_path");
