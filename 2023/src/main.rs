@@ -1687,6 +1687,242 @@ fn day_13_part_2(input_lines: &Vec<String>) {
     println!("Final result: {}", result);
 }
 
+fn d15_p1_hash(val: &str, parse_all: bool) -> (String, usize, char, u8) {
+    let mut result = 0;
+    let mut operation: char = '\0';
+    let mut code: String = "".to_string();
+    for c in val.chars() {
+        if !parse_all && (c == '-' || c == '=') {
+            operation = c;
+            break;
+        }
+        code.push(c);
+        result += c as usize;
+        result *= 17;
+        result %= 256;
+    }
+    let last_char = val.chars().last().unwrap();
+    let lense = if last_char > '0' { last_char as u8 - '0' as u8 } else { last_char as u8 };
+    return (code, result, operation, lense);
+}
+
+fn day_15_part_1(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 15 part 1");
+    let mut result: usize = 0;
+    for (idx, line) in input_lines.into_iter().enumerate() {
+        println!("{}.:\t{}\n", idx, line);
+        for step in line.split(',') {
+            let tmp = d15_p1_hash(step, true);
+            println!("Parsed step {} result {}", step, tmp.0);
+            result += tmp.1 as usize;
+        }
+    }
+    println!("Final result: {}", result);
+}
+
+fn day_15_part_2(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 15 part 2");
+    let mut result = 0;
+    let mut boxes: Vec<Vec<(String, u8)>> = vec![vec![]];
+    boxes.resize(256, vec![]);
+    for (idx, line) in input_lines.into_iter().enumerate() {
+        println!("{}.:\t{}\n", idx, line);
+        for step in line.split(',') {
+            let (label, box_idx, operation, lense) = d15_p1_hash(step, false);
+            println!("Parsed step {} result {} {} {} {}", step, label, box_idx, operation, lense);
+            if operation == '=' {
+                let mut update: bool = false;
+                for bx in boxes[box_idx].iter_mut() {
+                    if bx.0 == label {
+                        bx.1 = lense;
+                        update = true;
+                        break;
+                    }
+                }
+                if !update {
+                    boxes[box_idx].push((label, lense));
+                }
+            }
+            else if operation == '-' {
+                for (bx_idx, bx) in boxes[box_idx].iter().enumerate() {
+                    if bx.0 == label {
+                        boxes[box_idx].remove(bx_idx);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    for (idx, bx) in boxes.iter().enumerate() {
+        if bx.is_empty() {
+            continue;
+        }
+        println!("Box {}: {:?}", idx, bx);
+        for (jdx, lense) in bx.iter().enumerate() {
+            result += (idx+1) * (jdx+1) * lense.1 as usize;
+        }
+    }
+    println!("Final result: {}", result);
+}
+
+#[derive(Debug, Hash, std::cmp::Eq, std::cmp::PartialEq)]
+struct D16P1Next {
+    position: (usize, usize),
+    next_step: (i32, i32)
+}
+
+fn d16_p1_is_valid_pos(maze: &Vec<String>, next: &D16P1Next) -> bool {
+    let next_x = next.position.0 as i32 + next.next_step.0;
+    let next_y = next.position.1 as i32 + next.next_step.1;
+
+    if next_x < 0 || next_x >= maze[0].len() as i32 {
+        return false;
+    }
+
+    if next_y < 0 || next_y >= maze.len() as i32 {
+        return false;
+    }
+
+    return true;
+}
+
+fn d16_p1_get_next_steps(maze: &Vec<String>, pos: (usize, usize), step: (i32, i32)) -> Vec<(i32, i32)> {
+    let val = maze[pos.1].chars().nth(pos.0).unwrap();
+    if val == '.' {
+        return [step].to_vec();
+    } else if val == '|' {
+        if step == (1, 0) || step == (-1, 0) {
+             return [(0, 1), (0, -1)].to_vec();
+        } else {
+            return [step].to_vec();
+        }
+    } else if val == '-' {
+        if step == (0, 1) || step == (0, -1) {
+            return [(1, 0), (-1, 0)].to_vec();
+        } else {
+            return [step].to_vec();
+        }
+    } else if val == '\\' {
+        if step == (0, 1) {
+            return [(1, 0)].to_vec();
+        } else if step == (0, -1) {
+            return [(-1, 0)].to_vec();
+        } else if step == (1, 0) {
+            return [(0, 1)].to_vec();
+        } else if step == (-1, 0) {
+            return [(0, -1)].to_vec();
+        }
+    } else if val == '/' {
+        if step == (0, 1) {
+            return [(-1, 0)].to_vec();
+        } else if step == (0, -1) {
+            return [(1, 0)].to_vec();
+        } else if step == (1, 0) {
+            return [(0, -1)].to_vec();
+        } else if step == (-1, 0) {
+            return [(0, 1)].to_vec();
+        }
+    }
+    return [].to_vec();
+}
+
+fn d16_p1_parse_next_steps(maze: &Vec<String>, next: D16P1Next, next_steps: &mut Vec<D16P1Next>, visited: &mut HashSet<D16P1Next>) {
+    visited.insert(D16P1Next { position: next.position, next_step: next.next_step });
+    if !d16_p1_is_valid_pos(maze, &next) {
+        return;
+    }
+
+    let next_pos = ((next.position.0 as i32 + next.next_step.0) as usize,
+                    (next.position.1 as i32 + next.next_step.1) as usize);
+
+    let val = maze[next_pos.1].chars().nth(next_pos.0).unwrap();
+    if val == '.' {
+        let next_step = D16P1Next{position: next_pos, next_step: next.next_step};
+        if !visited.contains(&next_step) {
+            next_steps.push(next_step);
+        }
+        return;
+    } else if val == '|' {
+        if next.next_step == (1, 0) || next.next_step == (-1, 0) {
+            next_steps.push(D16P1Next { position: next_pos, next_step: (0, 1) });
+            next_steps.push(D16P1Next { position: next_pos, next_step: (0, -1) });
+        } else {
+            next_steps.push(D16P1Next { position: next_pos, next_step: next.next_step });
+        }
+    } else if val == '-' {
+        if next.next_step == (0, 1) || next.next_step == (0, -1) {
+            next_steps.push(D16P1Next { position: next_pos, next_step: (1, 0) });
+            next_steps.push(D16P1Next { position: next_pos, next_step: (-1, 0) });
+        } else {
+            next_steps.push(D16P1Next { position: next_pos, next_step: next.next_step });
+        }
+    } else if val == '\\' {
+        if next.next_step == (0, 1) {
+            next_steps.push(D16P1Next { position: next_pos, next_step: (1, 0) });
+        } else if next.next_step == (0, -1) {
+            next_steps.push(D16P1Next { position: next_pos, next_step: (-1, 0) });
+        } else if next.next_step == (1, 0) {
+            next_steps.push(D16P1Next { position: next_pos, next_step: (0, 1) });
+        } else if next.next_step == (-1, 0) {
+            next_steps.push(D16P1Next { position: next_pos, next_step: (0, -1) });
+        }
+    } else if val == '/' {
+        if next.next_step == (0, 1) {
+            next_steps.push(D16P1Next { position: next_pos, next_step: (-1, 0) });
+        } else if next.next_step == (0, -1) {
+            next_steps.push(D16P1Next { position: next_pos, next_step: (1, 0) });
+        } else if next.next_step == (1, 0) {
+            next_steps.push(D16P1Next { position: next_pos, next_step: (0, -1) });
+        } else if next.next_step == (-1, 0) {
+            next_steps.push(D16P1Next { position: next_pos, next_step: (0, 1) });
+        }
+    }
+}
+
+fn day_16_part_1(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 16 part 1");
+    //let mut next_steps: Vec<D16P1Next> = Vec::from([D16P1Next{position: (0, 0), next_step: (1, 0)}]); // move right: x + 1, y + 0
+    let mut next_steps: Vec<D16P1Next> = vec![];
+    for next in d16_p1_get_next_steps(input_lines, (0, 0), (1, 0)).iter() {
+        println!("Starting step: {:?}", next);
+        next_steps.push(D16P1Next { position: (0, 0), next_step: *next });
+    }
+    let mut visited: HashSet<D16P1Next> = HashSet::new();
+    while !next_steps.is_empty() {
+        let next_step = next_steps.pop().unwrap();
+        d16_p1_parse_next_steps(input_lines, next_step, &mut next_steps, &mut visited)
+    }
+    let mut unique_fields: HashSet<(usize, usize)> = HashSet::new();
+    for pos in visited {
+        unique_fields.insert(pos.position);
+    }
+
+    for row in 0..input_lines.len() {
+        for col in 0..input_lines[0].len() {
+            if unique_fields.contains(&(col, row)) {
+                print!("#");
+            } else {
+                print!(".");
+            }
+        }
+        print!("\n");
+    }
+
+    let result = unique_fields.len();
+
+    println!("Final result: {}", result);
+}
+
+fn day_16_part_2(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 16 part 2");
+    let mut result = 0;
+    for (idx, line) in input_lines.into_iter().enumerate() {
+        println!("{}.:\t{}", idx, line);
+        result += 1;
+    }
+    println!("Final result: {}", result);
+}
+
 fn main() {
     let solutions = HashMap::from([
         ("d1p1".to_string(), day_1_part_1 as fn(&Vec<String>) ), // cast to let compiler know about item
@@ -1716,6 +1952,10 @@ fn main() {
         ("d12p2".to_string(), day_12_part_2 ),
         ("d13p1".to_string(), day_13_part_1 ),
         ("d13p2".to_string(), day_13_part_2 ),
+        ("d15p1".to_string(), day_15_part_1 ),
+        ("d15p2".to_string(), day_15_part_2 ),
+        ("d16p1".to_string(), day_16_part_1 ),
+        ("d16p2".to_string(), day_16_part_2 ),
     ]);
     if env::args().count() != 3 {
         println!("Usage: program_name day_and_part input_path");
