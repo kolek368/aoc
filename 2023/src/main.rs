@@ -1879,13 +1879,11 @@ fn d16_p1_parse_next_steps(maze: &Vec<String>, next: D16P1Next, next_steps: &mut
     }
 }
 
-fn day_16_part_1(input_lines: &Vec<String>) {
-    println!("AoC 2023 Day 16 part 1");
-    //let mut next_steps: Vec<D16P1Next> = Vec::from([D16P1Next{position: (0, 0), next_step: (1, 0)}]); // move right: x + 1, y + 0
+fn d16_count_visited_fields(input_lines: &Vec<String>, start: (usize, usize), direction: (i32, i32)) -> usize {
     let mut next_steps: Vec<D16P1Next> = vec![];
-    for next in d16_p1_get_next_steps(input_lines, (0, 0), (1, 0)).iter() {
+    for next in d16_p1_get_next_steps(input_lines, start, direction).iter() {
         println!("Starting step: {:?}", next);
-        next_steps.push(D16P1Next { position: (0, 0), next_step: *next });
+        next_steps.push(D16P1Next { position: start, next_step: *next });
     }
     let mut visited: HashSet<D16P1Next> = HashSet::new();
     while !next_steps.is_empty() {
@@ -1897,28 +1895,67 @@ fn day_16_part_1(input_lines: &Vec<String>) {
         unique_fields.insert(pos.position);
     }
 
-    for row in 0..input_lines.len() {
-        for col in 0..input_lines[0].len() {
-            if unique_fields.contains(&(col, row)) {
-                print!("#");
-            } else {
-                print!(".");
-            }
-        }
-        print!("\n");
-    }
+    //for row in 0..input_lines.len() {
+    //    for col in 0..input_lines[0].len() {
+    //        if unique_fields.contains(&(col, row)) {
+    //            print!("#");
+    //        } else {
+    //            print!(".");
+    //        }
+    //    }
+    //    print!("\n");
+    //}
 
-    let result = unique_fields.len();
+    return unique_fields.len();
+}
 
+fn day_16_part_1(input_lines: &Vec<String>) {
+    println!("AoC 2023 Day 16 part 1");
+    let result = d16_count_visited_fields(input_lines, (0, 0), (1, 0));
     println!("Final result: {}", result);
 }
 
 fn day_16_part_2(input_lines: &Vec<String>) {
     println!("AoC 2023 Day 16 part 2");
     let mut result = 0;
-    for (idx, line) in input_lines.into_iter().enumerate() {
-        println!("{}.:\t{}", idx, line);
-        result += 1;
+    let max_row = input_lines.len() - 1;
+    let max_col = input_lines[0].len() - 1;
+    for row in 0..input_lines.len() {
+        for col in 0..input_lines[0].len() {
+            if row != 0 && row != max_row && col != 0 && col != max_col {
+                continue;
+            }
+            println!("Row: {}: Col: {}", row, col);
+            let mut tmp = 0;
+            if row == 0 {
+                if col == 0 {
+                    tmp = d16_count_visited_fields(input_lines, (col, row), (1, 0));
+                    tmp = std::cmp::max(tmp, d16_count_visited_fields(input_lines, (col, row), (0, 1)))
+                } else if col == max_col {
+                    tmp = d16_count_visited_fields(input_lines, (col, row), (-1, 0));
+                    tmp = std::cmp::max(tmp, d16_count_visited_fields(input_lines, (col, row), (0, 1)))
+                } else {
+                    tmp = d16_count_visited_fields(input_lines, (col, row), (0, 1));
+                }
+            } else if row == max_row {
+                if col == 0 {
+                    tmp = d16_count_visited_fields(input_lines, (col, row), (1, 0));
+                    tmp = std::cmp::max(tmp, d16_count_visited_fields(input_lines, (col, row), (0, -1)))
+                } else if col == max_col {
+                    tmp = d16_count_visited_fields(input_lines, (col, row), (-1, 0));
+                    tmp = std::cmp::max(tmp, d16_count_visited_fields(input_lines, (col, row), (0, -1)))
+                } else {
+                    tmp = d16_count_visited_fields(input_lines, (col, row), (0, -1));
+                }
+            } else {
+                if col == 0 {
+                    tmp = d16_count_visited_fields(input_lines, (col, row), (1, 0));
+                } else if col == max_col {
+                    tmp = d16_count_visited_fields(input_lines, (col, row), (-1, 0));
+                }
+            }
+            result = std::cmp::max(result, tmp);
+        }
     }
     println!("Final result: {}", result);
 }
